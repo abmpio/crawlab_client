@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,9 +9,7 @@ import (
 	"strings"
 
 	jsonUtil "github.com/abmpio/libx/json"
-	"github.com/abmpio/libx/mapx"
 	stringHelper "github.com/abmpio/libx/str"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -67,119 +64,18 @@ func (c *SpiderClient) GetSpiderByName(name string) (*Spider, error) {
 	if err != nil {
 		return nil, err
 	}
-	spider := &Spider{}
+	spiderList := make([]Spider, 0)
 	if response.Data != nil {
-		err = jsonUtil.ConvertObjectTo(response.Data, spider)
+		err = jsonUtil.ConvertObjectTo(response.Data, &spiderList)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return spider, nil
-}
-
-// #region ISchedulerApi members
-
-// create a schedule
-func (c *SpiderClient) CreateSchedule(schedule *Schedule) (*Schedule, error) {
-	if schedule == nil {
-		return nil, errors.New("schedule is nil")
-	}
-	response, err := c.doPost("schedules", schedule)
-	if err != nil {
-		return nil, err
-	}
-	resSchedule := &Schedule{}
-	if response.Data != nil {
-		err = jsonUtil.ConvertObjectTo(response.Data, resSchedule)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return resSchedule, nil
-}
-
-func (c *SpiderClient) UpdateSchedule(id primitive.ObjectID, data map[string]interface{}) (*Schedule, error) {
-	schedule, err := c.GetScheduler(id)
-	if err != nil {
-		return nil, err
-	}
-	if schedule == nil {
-		return nil, fmt.Errorf("scheduler not exist,id:%s", id.Hex())
-	}
-	newData := make(map[string]interface{})
-	if err := jsonUtil.ConvertObjectTo(schedule, &newData); err != nil {
-		return nil, err
-	}
-	mapx.MergeMaps(data, newData, mapx.MergeConfig{
-		OnlyReplaceExist: true,
-	})
-	apiPath := fmt.Sprintf("schedules/%s", id.Hex())
-	response, err := c.doPut(apiPath, newData)
-	if err != nil {
-		return nil, err
-	}
-	resSchedule := &Schedule{}
-	if response.Data != nil {
-		err = jsonUtil.ConvertObjectTo(response.Data, resSchedule)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return resSchedule, nil
-}
-
-// disable scheduler
-func (c *SpiderClient) DisableScheduler(id primitive.ObjectID) error {
-	apiPath := fmt.Sprintf("schedules/%s/disable", id.Hex())
-	_, err := c.doPost(apiPath, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// enable scheduler
-func (c *SpiderClient) EnableScheduler(id primitive.ObjectID) error {
-	apiPath := fmt.Sprintf("schedules/%s/enable", id.Hex())
-	_, err := c.doPost(apiPath, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *SpiderClient) DeleteScheduler(id primitive.ObjectID) error {
-	if id.IsZero() {
-		return nil
-	}
-	apiPath := fmt.Sprintf("schedules/%s", id.Hex())
-	_, err := c.doDelete(apiPath, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *SpiderClient) GetScheduler(id primitive.ObjectID) (*Schedule, error) {
-	if id.IsZero() {
+	if len(spiderList) <= 0 {
 		return nil, nil
 	}
-	apiPath := fmt.Sprintf("schedules/%s", id.Hex())
-	response, err := c.doGet(apiPath)
-	if err != nil {
-		return nil, err
-	}
-	schedule := &Schedule{}
-	if response.Data != nil {
-		err = jsonUtil.ConvertObjectTo(response.Data, schedule)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return schedule, nil
+	return &spiderList[0], nil
 }
-
-// #endregion
 
 func (c *baseClient) doPost(apiPath string, data interface{}) (*spiderResponse, error) {
 	return c.doRequest(apiPath, "POST", data, false)
