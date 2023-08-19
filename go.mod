@@ -5,5 +5,7 @@ go 1.20
 require (
 	github.com/abmpio/libx v0.0.0-20230731032308-f20ff331bf99
 	github.com/robfig/cron/v3 v3.0.1
-	go.mongodb.org/mongo-driver v1.12.0
+	go.mongodb.org/mongo-driver v1.12.1
 )
+
+replace github.com/abmpio/libx => ./../libx
