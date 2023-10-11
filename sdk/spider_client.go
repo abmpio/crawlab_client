@@ -10,6 +10,8 @@ import (
 
 	jsonUtil "github.com/abmpio/libx/json"
 	stringHelper "github.com/abmpio/libx/str"
+
+	"github.com/go-resty/resty/v2"
 )
 
 var (
@@ -60,7 +62,9 @@ func (c *SpiderClient) GetSpiderByName(name string) (*Spider, error) {
 	v.Set("stats", "false")
 
 	apiPath := fmt.Sprintf("spiders?%s", v.Encode())
-	response, err := c.doGet(apiPath)
+	response, err := c.doGet(apiPath, func(o *requestOptions) {
+		o.queryParams = &v
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +81,29 @@ func (c *SpiderClient) GetSpiderByName(name string) (*Spider, error) {
 	return &spiderList[0], nil
 }
 
-func (c *baseClient) doPost(apiPath string, data interface{}) (*spiderResponse, error) {
-	return c.doRequest(apiPath, "POST", data, false)
+func (c *baseClient) doPost(apiPath string, opts ...func(o *requestOptions)) (*spiderResponse, error) {
+	// return c.doRequest(apiPath, "POST", data, false)
+	return c.doRequestWithResty(apiPath, resty.MethodPost, opts...)
 }
 
-func (c *baseClient) doPut(apiPath string, data interface{}) (*spiderResponse, error) {
-	return c.doRequest(apiPath, "PUT", data, false)
+func (c *baseClient) doPut(apiPath string, opts ...func(o *requestOptions)) (*spiderResponse, error) {
+	// return c.doRequest(apiPath, "PUT", data, false)
+	return c.doRequestWithResty(apiPath, resty.MethodPut, opts...)
 }
 
-func (c *baseClient) doDelete(apiPath string, data interface{}) (*spiderResponse, error) {
-	return c.doRequest(apiPath, "DELETE", data, true)
+func (c *baseClient) doDelete(apiPath string, opts ...func(o *requestOptions)) (*spiderResponse, error) {
+	// return c.doRequest(apiPath, "DELETE", data, true)
+	optList := make([]func(o *requestOptions), 0)
+	optList = append(optList, opts...)
+	optList = append(optList, func(o *requestOptions) {
+		o.ignoreResponse = true
+	})
+	return c.doRequestWithResty(apiPath, resty.MethodDelete, optList...)
 }
 
-func (c *baseClient) doGet(apiPath string) (*spiderResponse, error) {
-	return c.doRequest(apiPath, "GET", nil, false)
+func (c *baseClient) doGet(apiPath string, opts ...func(o *requestOptions)) (*spiderResponse, error) {
+	// return c.doRequest(apiPath, "GET", nil, false)
+	return c.doRequestWithResty(apiPath, resty.MethodGet, opts...)
 }
 
 func (c *baseClient) doRequest(apiPath string, httpMethod string, data interface{}, ignoreResponse bool) (*spiderResponse, error) {
@@ -138,4 +151,63 @@ func (c *baseClient) doRequest(apiPath string, httpMethod string, data interface
 		}
 	}
 	return spiderResponse, nil
+}
+
+type requestOptions struct {
+	queryParams *url.Values
+	bodyValue   interface{}
+
+	ignoreResponse bool
+}
+
+func (c *baseClient) doRequestWithResty(apiPath string, httpMethod string, opts ...func(o *requestOptions)) (*spiderResponse, error) {
+	url := fmt.Sprintf("%s%s", c.baseUrl, apiPath)
+	client := resty.New()
+	r := client.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json")
+	if len(c.token) > 0 {
+		r.SetHeader("Authorization", c.token)
+	}
+	requestOptions := &requestOptions{
+		ignoreResponse: false,
+	}
+	for _, eachOpt := range opts {
+		eachOpt(requestOptions)
+	}
+	// queryParams
+	if requestOptions.queryParams != nil {
+		r.SetQueryParamsFromValues(*requestOptions.queryParams)
+	}
+	// ignore response?
+	if !requestOptions.ignoreResponse {
+		r.SetResult(&spiderResponse{})
+	}
+	if requestOptions.bodyValue != nil {
+		r.SetBody(requestOptions.bodyValue)
+	}
+	resp, err := r.Execute(httpMethod, url)
+	if err != nil {
+		err = fmt.Errorf("向服务器发送post请求时返回异常,url:%s,异常信息:%s", url, err.Error())
+		return nil, err
+	}
+	if !resp.IsSuccess() {
+		err = fmt.Errorf("向服务器发送请求返回了错误的结果,url:%s,statusCode:%d,返回的body:%s",
+			url,
+			resp.StatusCode(),
+			resp.String())
+		return nil, err
+	}
+	var spiderRes *spiderResponse
+	if !requestOptions.ignoreResponse {
+		var ok bool
+		spiderRes, ok = resp.Result().(*spiderResponse)
+		if !ok {
+			err = fmt.Errorf("向服务器发送请求时接收到的数据不是正确的数据,url:%s,返回的数据为:%s",
+				resp.Status(),
+				url)
+			return nil, err
+		}
+	}
+	return spiderRes, nil
 }

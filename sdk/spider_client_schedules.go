@@ -26,7 +26,9 @@ func (c *SpiderClient) CreateSchedule(schedule *Schedule) (*Schedule, error) {
 	if schedule == nil {
 		return nil, errors.New("schedule is nil")
 	}
-	response, err := c.doPost("schedules", schedule)
+	response, err := c.doPost("schedules", func(o *requestOptions) {
+		o.bodyValue = schedule
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +58,9 @@ func (c *SpiderClient) UpdateSchedule(id primitive.ObjectID, data map[string]int
 		OnlyReplaceExist: true,
 	})
 	apiPath := fmt.Sprintf("schedules/%s", id.Hex())
-	response, err := c.doPut(apiPath, newData)
+	response, err := c.doPut(apiPath, func(o *requestOptions) {
+		o.bodyValue = newData
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +77,7 @@ func (c *SpiderClient) UpdateSchedule(id primitive.ObjectID, data map[string]int
 // disable scheduler
 func (c *SpiderClient) DisableScheduler(id primitive.ObjectID) error {
 	apiPath := fmt.Sprintf("schedules/%s/disable", id.Hex())
-	_, err := c.doPost(apiPath, nil)
+	_, err := c.doPost(apiPath)
 	if err != nil {
 		return err
 	}
@@ -83,7 +87,7 @@ func (c *SpiderClient) DisableScheduler(id primitive.ObjectID) error {
 // enable scheduler
 func (c *SpiderClient) EnableScheduler(id primitive.ObjectID) error {
 	apiPath := fmt.Sprintf("schedules/%s/enable", id.Hex())
-	_, err := c.doPost(apiPath, nil)
+	_, err := c.doPost(apiPath)
 	if err != nil {
 		return err
 	}
@@ -95,7 +99,7 @@ func (c *SpiderClient) DeleteScheduler(id primitive.ObjectID) error {
 		return nil
 	}
 	apiPath := fmt.Sprintf("schedules/%s", id.Hex())
-	_, err := c.doDelete(apiPath, nil)
+	_, err := c.doDelete(apiPath)
 	if err != nil {
 		return err
 	}
