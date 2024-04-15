@@ -28,6 +28,31 @@ func newSpiderClient(client *baseClient) *SpiderClient {
 	}
 }
 
+func (c *SpiderClient) GetSpiderList() ([]*Spider, error) {
+	v := url.Values{}
+	v.Set("all", "true")
+
+	apiPath := fmt.Sprintf("spiders?%s", v.Encode())
+	response, err := c.doRequestWithResty(apiPath, resty.MethodGet, func(o *requestOptions) {
+		o.queryParams = &v
+	})
+	if err != nil {
+		return nil, err
+	}
+	result, err := c.unmarshalResponseValue(response)
+	if err != nil {
+		return nil, err
+	}
+	spiderList := make([]*Spider, 0)
+	if result.Data != nil {
+		err = jsonUtil.ConvertObjectTo(result.Data, &spiderList)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return spiderList, nil
+}
+
 func (c *SpiderClient) GetSpiderByName(name string) (*Spider, error) {
 	if len(name) <= 0 {
 		return nil, nil
