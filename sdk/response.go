@@ -14,6 +14,9 @@ func (r *spiderResponse) IsSuccessful() bool {
 }
 
 func (r *spiderResponse) IsError() error {
+	if r.Message == "" {
+		return nil
+	}
 	if r.Message != "success" {
 		return errors.New(r.Error)
 	}
