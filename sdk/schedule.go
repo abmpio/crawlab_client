@@ -8,34 +8,34 @@ import (
 	"github.com/abmpio/libx/mapx"
 	"github.com/go-resty/resty/v2"
 	"github.com/robfig/cron/v3"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Schedule struct {
-	Id          primitive.ObjectID   `json:"_id,omitempty"`
+	Id          bson.ObjectID        `json:"_id,omitempty"`
 	Name        string               `json:"name,omitempty"`
 	Description string               `json:"description,omitempty"`
-	SpiderId    primitive.ObjectID   `json:"spider_id,omitempty"`
+	SpiderId    bson.ObjectID        `json:"spider_id,omitempty"`
 	Cron        string               `json:"cron,omitempty"`
 	EntryId     cron.EntryID         `json:"entry_id,omitempty"`
 	Cmd         string               `json:"cmd,omitempty"`
 	Param       string               `json:"param,omitempty"`
 	Mode        string               `json:"mode,omitempty"`
-	NodeIds     []primitive.ObjectID `json:"node_ids,omitempty"`
+	NodeIds     []bson.ObjectID      `json:"node_ids,omitempty"`
 	Priority    int                  `json:"priority,omitempty"`
 	Enabled     bool                 `json:"enabled,omitempty"`
-	UserId      primitive.ObjectID   `json:"user_id,omitempty"`
+	UserId      bson.ObjectID        `json:"user_id,omitempty"`
 }
 
 type IScheduleApi interface {
 	CreateSchedule(schedule *Schedule) (*Schedule, error)
-	UpdateSchedule(id primitive.ObjectID, data map[string]interface{}) (*Schedule, error)
+	UpdateSchedule(id bson.ObjectID, data map[string]interface{}) (*Schedule, error)
 
-	DisableScheduler(id primitive.ObjectID) error
-	EnableScheduler(id primitive.ObjectID) error
-	DeleteScheduler(id primitive.ObjectID) error
-	GetScheduler(id primitive.ObjectID) (*Schedule, error)
+	DisableScheduler(id bson.ObjectID) error
+	EnableScheduler(id bson.ObjectID) error
+	DeleteScheduler(id bson.ObjectID) error
+	GetScheduler(id bson.ObjectID) (*Schedule, error)
 }
 
 type ScheduleClient struct {
@@ -76,7 +76,7 @@ func (c *ScheduleClient) CreateSchedule(schedule *Schedule) (*Schedule, error) {
 	return resSchedule, nil
 }
 
-func (c *ScheduleClient) UpdateSchedule(id primitive.ObjectID, data map[string]interface{}) (*Schedule, error) {
+func (c *ScheduleClient) UpdateSchedule(id bson.ObjectID, data map[string]interface{}) (*Schedule, error) {
 	schedule, err := c.GetScheduler(id)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (c *ScheduleClient) UpdateSchedule(id primitive.ObjectID, data map[string]i
 }
 
 // disable scheduler
-func (c *ScheduleClient) DisableScheduler(id primitive.ObjectID) error {
+func (c *ScheduleClient) DisableScheduler(id bson.ObjectID) error {
 	apiPath := fmt.Sprintf("schedules/%s/disable", id.Hex())
 	response, err := c.doRequestWithResty(apiPath, resty.MethodPost)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ScheduleClient) DisableScheduler(id primitive.ObjectID) error {
 }
 
 // enable scheduler
-func (c *ScheduleClient) EnableScheduler(id primitive.ObjectID) error {
+func (c *ScheduleClient) EnableScheduler(id bson.ObjectID) error {
 	apiPath := fmt.Sprintf("schedules/%s/enable", id.Hex())
 	response, err := c.doRequestWithResty(apiPath, resty.MethodPost)
 	if err != nil {
@@ -147,7 +147,7 @@ func (c *ScheduleClient) EnableScheduler(id primitive.ObjectID) error {
 	return nil
 }
 
-func (c *ScheduleClient) DeleteScheduler(id primitive.ObjectID) error {
+func (c *ScheduleClient) DeleteScheduler(id bson.ObjectID) error {
 	if id.IsZero() {
 		return nil
 	}
@@ -170,7 +170,7 @@ func (c *ScheduleClient) DeleteScheduler(id primitive.ObjectID) error {
 	return nil
 }
 
-func (c *ScheduleClient) GetScheduler(id primitive.ObjectID) (*Schedule, error) {
+func (c *ScheduleClient) GetScheduler(id bson.ObjectID) (*Schedule, error) {
 	if id.IsZero() {
 		return nil, nil
 	}

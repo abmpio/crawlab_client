@@ -5,13 +5,13 @@ import (
 	"net/url"
 
 	jsonUtil "github.com/abmpio/libx/json"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/go-resty/resty/v2"
 )
 
 type Spider struct {
-	Id    primitive.ObjectID `json:"_id"`
+	Id    bson.ObjectID `json:"_id"`
 	Name  string             `json:"name"`
 	Cmd   string             `json:"cmd"`
 	Param string             `json:"param"`
